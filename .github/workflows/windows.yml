@@ -21,7 +21,7 @@ jobs:
     name: Get commit message
     uses: ./.github/workflows/commit_message.yml
 
-  fast_spin:
+  fast_spin_x64:
     name: fast, py3.12/npAny, spin
     needs: get_commit_message
     # Ensure (a) this doesn't run on forks by default, and
@@ -65,7 +65,7 @@ jobs:
 
 
   #############################################################################
-  full_spin_min_numpy:
+  full_spin_min_numpy_x64:
     name: full, py3.11/npMin, spin
     needs: get_commit_message
     if: >
@@ -108,7 +108,7 @@ jobs:
 
 
   #############################################################################
-  full_build_sdist_wheel:
+  full_build_sdist_wheel_x64:
     # TODO: enable ILP64 once possible
     name: no pythran & sdist+wheel, full, py3.11/npPre, pip+pytest
     needs: get_commit_message
@@ -168,3 +168,43 @@ jobs:
           # test runner parallel clashes with OpenBLAS multithreading
           $env:OPENBLAS_NUM_THREADS=1
           pytest --pyargs scipy
+          
+
+  #############################################################################
+  fast_spin_arm64:
+    name: fast, py3.12/npAny, spin (ARM64)
+    runs-on: windows-11-arm
+    if: > 
+      needs.get_commit_message.outputs.message == 1 &&
+      (github.repository == 'scipy/scipy' || github.repository == '')
+    needs: get_commit_message
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'arm64'
+          
+      - name: Common Setup
+        uses: ./.github/windows_arm64_steps
+
+      - name: pip-packages
+        run: |
+          pip install numpy cython pybind11 pythran meson ninja pytest pytest-xdist pytest-timeout pooch spin hypothesis
+          python -m pip install -r requirements/openblas.txt
+
+      - name: Build
+        run: |
+          $env:cc = "clang-cl"
+          $env:cxx = "clang-cl"
+          $env:fc = "flang-new"
+          spin build --with-scipy-openblas
+
+      - name: Test
+        run: |
+          $env:OPENBLAS_NUM_THREADS = 1
+          spin test -j2 -- --durations=25
+
