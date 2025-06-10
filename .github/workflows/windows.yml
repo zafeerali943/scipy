@@ -178,10 +178,11 @@ jobs:
     # if: > 
     #   needs.get_commit_message.outputs.message == 1 &&
     #   (github.repository == 'scipy/scipy' || github.repository == '')
-    needs: get_commit_message
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
         
       - name: Setup Python
         uses: actions/setup-python@v5
